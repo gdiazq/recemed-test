@@ -17,6 +17,27 @@ import { renderPage } from 'vike/server'
 import { root } from './root.js'
 const isProduction = process.env.NODE_ENV === 'production'
 
+const validate = async (rut) => {
+  try {
+    const response = await fetch(`http://rec-staging.recemed.cl/api/users/exists?rut=${rut}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+    if (response.ok) {
+      const data = await response.json();
+      return data.isValid;
+    } else {
+      console.error('Error:', response.statusText);
+      return false;
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    return false;
+  }
+};
+
 startServer()
 
 async function startServer() {
@@ -51,9 +72,13 @@ async function startServer() {
   // Vike middleware. It should always be our last middleware (because it's a
   // catch-all middleware superseding any middleware placed after it).
   app.get('*', async (req, res, next) => {
+    const { rut } = req.query;
+    const isValidRut = await validate(rut);
+
     const pageContextInit = {
       urlOriginal: req.originalUrl,
-      headersOriginal: req.headers
+      headersOriginal: req.headers,
+      isValidRut
     }
     const pageContext = await renderPage(pageContextInit)
     if (pageContext.errorWhileRendering) {
