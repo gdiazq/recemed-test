@@ -101,7 +101,7 @@ function api(app) {
         res.cookie('user-data', JSON.stringify(profiles), {
           maxAge: 24 * 60 * 60 * 1000,
         });
-        res.redirect('/');
+        res.redirect('/login/dashboard');
       }
     } catch (error) {
       console.error(error);
