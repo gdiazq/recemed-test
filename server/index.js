@@ -14,29 +14,10 @@
 import express from 'express'
 import compression from 'compression'
 import { renderPage } from 'vike/server'
+import bodyParser from 'body-parser';
+import cookieParser from 'cookie-parser';
 import { root } from './root.js'
 const isProduction = process.env.NODE_ENV === 'production'
-
-const validate = async (rut) => {
-  try {
-    const response = await fetch(`http://rec-staging.recemed.cl/api/users/exists?rut=${rut}`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
-    });
-    if (response.ok) {
-      const data = await response.json();
-      return data.isValid;
-    } else {
-      console.error('Error:', response.statusText);
-      return false;
-    }
-  } catch (error) {
-    console.error('Error:', error);
-    return false;
-  }
-};
 
 startServer()
 
@@ -44,6 +25,10 @@ async function startServer() {
   const app = express()
 
   app.use(compression())
+  app.use(cookieParser());
+  app.use(express.json());
+  app.use(bodyParser.urlencoded({ extended: true }));
+  pass(app);
 
   // Vite integration
   if (isProduction) {
@@ -72,15 +57,16 @@ async function startServer() {
   // Vike middleware. It should always be our last middleware (because it's a
   // catch-all middleware superseding any middleware placed after it).
   app.get('*', async (req, res, next) => {
-    const { rut } = req.query;
-    const isValidRut = await validate(rut);
+    const logged = !!req.cookies['token']; 
 
     const pageContextInit = {
       urlOriginal: req.originalUrl,
       headersOriginal: req.headers,
-      isValidRut
-    }
-    const pageContext = await renderPage(pageContextInit)
+      user: {
+        logged,
+      },
+    };
+    const pageContext = await renderPage(pageContextInit);
     if (pageContext.errorWhileRendering) {
       // Install error tracking here, see https://vike.dev/errors
     }
@@ -95,9 +81,79 @@ async function startServer() {
       // For HTTP streams use httpResponse.pipe() instead, see https://vike.dev/streaming
       res.send(body)
     }
-  })
+  });
 
   const port = process.env.PORT || 3000
   app.listen(port)
   console.log(`Server running at http://localhost:${port}`)
+}
+
+function pass(app) {
+  app.post('/_app/login', async (req, res) => {
+    try {
+      const { rut } = req.cookies;
+      const { password } = req.body;
+    
+      const user = await fetch("http://rec-staging.recemed.cl/api/users/log_in", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ user: { rut, password } })
+      }).then(res => res.json());
+    
+      if (user?.errors) {
+        res.redirect(`/login?error=${encodeURIComponent(user.errors.detail)}`);
+      } else if (user?.data) {
+        const { token, profiles } = user.data;
+    
+        res.cookie('token', token, {
+          maxAge: 24 * 60 * 60 * 1000,
+        });
+
+        res.cookie('user-data', JSON.stringify(profiles), {
+          maxAge: 24 * 60 * 60 * 1000,
+        });
+
+        res.redirect('/');
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  });
+
+
+  app.post('/_app/login/validate', async (req, res) => {
+    try {
+      const { rut } = req.body;
+      const user = await fetch(`http://rec-staging.recemed.cl/api/users/exists?rut=${rut}`).then(res => res.json());
+      if (user?.errors) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: "Rut Invalido, por favor verifique los datos e intente nuevamente."
+          }
+        });
+      }
+
+      if (user?.data) {
+        res.cookie('rut', rut, {
+          maxAge: 24 * 60 * 60 * 1000,
+          httpOnly: true,
+        });
+        res.redirect('/login');
+      } else {
+        res.status(400).json({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'La validación del RUT falló. Por favor, verifique los datos e intente nuevamente.'
+          }
+        });
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  });
 }
