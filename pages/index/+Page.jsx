@@ -1,6 +1,16 @@
+import { validateRUT } from './validateRut';
+
 export { Page }
 
 function Page() {
+
+  const handleSubmit = (e) => {
+    const rut = e.target.rut.value;
+    if (!validateRUT(rut)) {
+      e.preventDefault();
+      alert('Rut inválido. Por favor, verifica los datos e intenta nuevamente.');
+    }
+  }
   
   return (
     <>
@@ -8,7 +18,7 @@ function Page() {
         <h1 className="text-xl md:text-3xl font-semibold text-stone-600">Portal Paciente</h1>
         <h2 className="text-3xl md:text-5xl font-bold text-rm-blue-100 mb-4">Ingresa a tu Portal</h2>
         <div className="flex flex-col justify-center content-center">
-          <form className="flex flex-col justify-center items-center" method="POST" action="/_app/login/validate">
+          <form className="flex flex-col justify-center items-center" method="POST" action="/api/login/validate" onSubmit={handleSubmit}>
             <input 
               className="p-2 text-center rounded-tl-full rounded-tr-full rounded-br-full rounded-bl-full w-full" 
               type="text" 

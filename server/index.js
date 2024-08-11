@@ -1,16 +1,3 @@
-// This file isn't processed by Vite, see https://github.com/vikejs/vike/issues/562
-// Consequently:
-//  - When changing this file, you needed to manually restart your server for your changes to take effect.
-//  - To use your environment variables defined in your .env files, you need to install dotenv, see https://vike.dev/env
-//  - To use your path aliases defined in your vite.config.js, you need to tell Node.js about them, see https://vike.dev/path-aliases
-
-// If you want Vite to process your server code then use one of these:
-//  - vavite (https://github.com/cyco130/vavite)
-//     - See vavite + Vike examples at https://github.com/cyco130/vavite/tree/main/examples
-//  - vite-node (https://github.com/antfu/vite-node)
-//  - HatTip (https://github.com/hattipjs/hattip)
-//    - You can use Bati (https://batijs.dev/) to scaffold a Vike + HatTip app. Note that Bati generates apps that use the V1 design (https://vike.dev/migration/v1-design) and Vike packages (https://vike.dev/vike-packages)
-
 import express from 'express'
 import compression from 'compression'
 import { renderPage } from 'vike/server'
@@ -28,7 +15,7 @@ async function startServer() {
   app.use(cookieParser());
   app.use(express.json());
   app.use(bodyParser.urlencoded({ extended: true }));
-  pass(app);
+  api(app);
 
   // Vite integration
   if (isProduction) {
@@ -88,8 +75,8 @@ async function startServer() {
   console.log(`Server running at http://localhost:${port}`)
 }
 
-function pass(app) {
-  app.post('/_app/login', async (req, res) => {
+function api(app) {
+  app.post('/api/login', async (req, res) => {
     try {
       const { rut } = req.cookies;
       const { password } = req.body;
@@ -114,7 +101,6 @@ function pass(app) {
         res.cookie('user-data', JSON.stringify(profiles), {
           maxAge: 24 * 60 * 60 * 1000,
         });
-
         res.redirect('/');
       }
     } catch (error) {
@@ -123,19 +109,10 @@ function pass(app) {
   });
 
 
-  app.post('/_app/login/validate', async (req, res) => {
+  app.post('/api/login/validate', async (req, res) => {
     try {
       const { rut } = req.body;
       const user = await fetch(`http://rec-staging.recemed.cl/api/users/exists?rut=${rut}`).then(res => res.json());
-      if (user?.errors) {
-        return res.status(400).json({
-          success: false,
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: "Rut Invalido, por favor verifique los datos e intente nuevamente."
-          }
-        });
-      }
 
       if (user?.data) {
         res.cookie('rut', rut, {
@@ -143,14 +120,6 @@ function pass(app) {
           httpOnly: true,
         });
         res.redirect('/login');
-      } else {
-        res.status(400).json({
-          success: false,
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'La validación del RUT falló. Por favor, verifique los datos e intente nuevamente.'
-          }
-        });
       }
     } catch (error) {
       console.error(error);
