@@ -359,7 +359,7 @@ Se usa Tailwind CSS en todo el codigo sin codigo CSS nativo, solamente en el [in
 
 Los colores son son:
 - `"rm-blue-100": "#367CF4"`
-- `"rm-blue-200": "#367cc8"`
+- `"rm-blue-200": "#367CC8"`
 
 Y esta es la configuracion de la pagina de [tailwind.config.js]
 
@@ -376,10 +376,59 @@ module.exports = {
     extend: {
       colors: {
         'rm-blue-100': '#367CF4',
-        'rm-blue-200': '#367cc8',
+        'rm-blue-200': '#367CC8',
       },
     },
   },
   plugins: [],
 };
 ```
+
+## Vike
+
+Se utilizo Vike-Vite en todo el proyecto como se vio anteriormente, ademas se muestra la configuracion del archivo [vite.config.js]
+
+```javascript
+import react from '@vitejs/plugin-react'
+import vike from 'vike/plugin'
+
+export default {
+  plugins: [react(), vike()]
+}
+```
+
+## Unit Test
+
+Se realizo el unit test en la parte del rut para la validacion de los RUT para que fuera el correcto y en formato, esto si hizo aqui para que los rut de los pacientes sean consistentes con el entregado en la rubrica, este es el archivo: 
+
+```javascript
+import { validateRUT } from "./pages/index/validateRut";
+
+test("Estos tendrian que ser RUT válidos", () => {
+    expect(validateRUT("21224626-3")).toBe(true);
+    expect(validateRUT("11111111-1")).toBe(true);
+    expect(validateRUT("20489922-3")).toBe(true);
+});
+
+test("Estos tendrian que ser rut invalidos", () => {
+    expect(validateRUT("12345678-K")).toBe(false);
+    expect(validateRUT("111111111")).toBe(false);
+    expect(validateRUT("2.111.111-1")).toBe(false);
+    expect(validateRUT("20.489.922-3")).toBe(false);
+    expect(validateRUT("ab.cde.ada-3")).toBe(false);
+    expect(validateRUT("31.cd3.1da-3")).toBe(false);
+    expect(validateRUT("dw-4")).toBe(false);
+    expect(validateRUT("dad")).toBe(false);
+    expect(validateRUT("dd wdd-4")).toBe(false);
+});
+
+test("Este RUT vacio tendria que ser invalido", () => {
+    expect(validateRUT("")).toBe(false);
+});
+```
+
+Para ejecutar el unit test es requero instalar el paquete de jest con `npm install --save-dev jest` y ademas de babel `npm install --save-dev babel-jest @babel/preset-env @babel/preset-react` despues de eso se requiere ejecutar el comando `npm test` en el terminal ubicado en la carpeta raiz del proyecto
+
+## Ejecutar el proyecto
+
+Para ejecutar el proyecto primero se debe clonar del repositorio, despues se requiere ejecutar el comando `npm install` y despues ejecutar el comando `npm run dev`
